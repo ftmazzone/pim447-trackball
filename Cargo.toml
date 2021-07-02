@@ -1,5 +1,5 @@
 [package]
-name = "pim447-trackball"
+name = "pim447_trackball"
 version = "0.1.0"
 edition = "2018"
 
@@ -7,3 +7,6 @@ edition = "2018"
 
 [dependencies]
 rppal = { version = "0.12"}
+futures = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread","time"] }
+flume = "0.10"
