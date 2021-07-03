@@ -78,7 +78,7 @@ impl Trackball {
     }
 
     /// Turn on the trackball.
-    pub fn turn_on(&mut self) -> Result<(), rppal::i2c::Error> {
+    fn turn_on(&mut self) -> Result<(), rppal::i2c::Error> {
         self.i2c.set_slave_address(I2C_ADDR_PRIMARY)?;
 
         let mut chip_id_btyes = [0u8; 2];
@@ -99,19 +99,19 @@ impl Trackball {
     }
 
     /// Turn off the trackball.
-    pub fn turn_off(&mut self) -> Result<(), rppal::i2c::Error> {
+    fn turn_off(&mut self) -> Result<(), rppal::i2c::Error> {
         self.set_contrast(0x00)?;
         Ok(())
     }
 
     // Set the contrast of the trackball leds.
-    pub fn set_contrast(&mut self, contrast: u8) -> Result<(), rppal::i2c::Error> {
+    fn set_contrast(&mut self, contrast: u8) -> Result<(), rppal::i2c::Error> {
         self.contrast = contrast;
         self.set_colour(self.red, self.green, self.blue, self.white)
     }
 
     /// Set the colour of the trackball leds.
-    pub fn set_colour(&mut self, r: u8, g: u8, b: u8, w: u8) -> Result<(), rppal::i2c::Error> {
+    fn set_colour(&mut self, r: u8, g: u8, b: u8, w: u8) -> Result<(), rppal::i2c::Error> {
         let contrast;
 
         self.red = r;
@@ -163,5 +163,16 @@ impl Trackball {
         };
 
         Ok(input)
+    }
+
+    /// Execute the command
+    pub fn execute_command(&mut self, command: Command) -> Result<(), rppal::i2c::Error> {
+        match command {
+            Command::TurnOff => self.turn_off()?,
+            Command::TurnOn => self.turn_on()?,
+            Command::SetColour(r, g, b, w) => self.set_colour(r, g, b, w)?,
+            Command::SetContrast(c) => self.set_contrast(c)?,
+        }
+        Ok(())
     }
 }
