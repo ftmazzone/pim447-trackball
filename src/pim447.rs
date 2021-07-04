@@ -1,4 +1,5 @@
 use rppal::i2c::I2c;
+use std::cmp::Ordering;
 
 const I2C_ADDR_PRIMARY: u16 = 0x0A;
 //const I2C_ADDR_ALTERNATIVE: u16 = 0x0B;
@@ -174,5 +175,83 @@ impl Trackball {
             Command::SetContrast(c) => self.set_contrast(c)?,
         }
         Ok(())
+    }
+
+    /// Convert from the HEX colour model to the RGB color model.
+    pub fn convert_hex_colour_to_rgb(
+        hexcolour: String,
+    ) -> Result<(f64, f64, f64), std::num::ParseIntError> {
+        let increment;
+        let r: f64;
+        let g: f64;
+        let b: f64;
+
+        if hexcolour.chars().count() == 7 {
+            increment = 1;
+        } else {
+            increment = 0;
+        }
+
+        let r_string: String = hexcolour.chars().skip(increment).take(2).collect();
+        let g_string: String = hexcolour.chars().skip(increment + 2).take(2).collect();
+        let b_string: String = hexcolour.chars().skip(increment + 4).take(2).collect();
+
+        r = i64::from_str_radix(&r_string, 16)? as f64;
+        g = i64::from_str_radix(&g_string, 16)? as f64;
+        b = i64::from_str_radix(&b_string, 16)? as f64;
+
+        Ok((r, g, b))
+    }
+
+    /// Convert from the rgb colour model to the RGBW colour model.
+    pub fn convert_rgb_colour_to_rgbw(
+        r: f64,
+        g: f64,
+        b: f64,
+    ) -> Result<(u8, u8, u8, u8), std::num::ParseIntError> {
+        let mut red = 0 as u8;
+        let mut green = 0 as u8;
+        let mut blue = 0 as u8;
+        let mut white = 0 as u8;
+
+        //Get the maximum between R, G, and B
+        let mut colours = [r, g, b];
+        colours.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+        let t_m = colours[2];
+
+        // If the maximum value is 0, immediately return pure black.
+        if t_m as u8 == 0 {
+            return Ok((red, green, blue, white));
+        }
+
+        //This section serves to figure out what the color with 100% hue is
+        let multiplier = 255.0 / t_m;
+        let h_r = r * multiplier;
+        let h_g = g * multiplier;
+        let h_b = b * multiplier;
+
+        //This calculates the Whiteness (not strictly speaking Luminance) of the color
+        let mut hues = [h_r, h_g, h_b];
+        hues.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+        let max_hue = hues[0];
+        let min_hue = hues[2];
+        let luminance = ((max_hue + min_hue) / 2.0 - 127.5) * (255.0 / 127.5) / multiplier;
+
+        //Calculate the output values
+        white = luminance as u8;
+        red = r as u8 - white;
+        green = g as u8 - white;
+        blue = b as u8 - white;
+
+        Ok((red, green, blue, white))
+    }
+
+    //Converts hexadecimal colour code to a rgbw colour code.
+    pub fn convert_hex_colour_to_rgbw(
+        hex_colour: String,
+    ) -> Result<(u8, u8, u8, u8), std::num::ParseIntError> {
+        let (r, g, b) = Trackball::convert_hex_colour_to_rgb(hex_colour)?;
+        let (red, green, blue, white) = Trackball::convert_rgb_colour_to_rgbw(r, g, b)?;
+        Ok((red, green, blue, white))
     }
 }
