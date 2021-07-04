@@ -11,6 +11,8 @@ use tokio::time::timeout;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let (red, green, blue, white) = Trackball::convert_hex_colour_to_rgbw("#FFFFFF".to_string())?;
+
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     simple_signal::set_handler(&[Signal::Int, Signal::Term], move |_signals| {
@@ -24,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut trackball: Trackball = Trackball::new()?;
     trackball.execute_command(Command::TurnOn)?;
     trackball.execute_command(Command::SetContrast(0xff))?;
-    trackball.execute_command(Command::SetColour(0xff, 0xff, 0xff, 0xff))?;
+    trackball.execute_command(Command::SetColour(red, green, blue, white))?;
     println!("On");
 
     let task_read_inputs = tokio::spawn(async move {
