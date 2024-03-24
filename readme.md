@@ -1,4 +1,4 @@
-# ssd1351
+# pim447-trackball
 
 Sample code to run the trackball [PIM447](https://shop.pimoroni.com/products/trackball-breakout) oled display.
 
