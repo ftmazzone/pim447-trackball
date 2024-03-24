@@ -1,5 +1,5 @@
 use rppal::i2c::I2c;
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 const I2C_ADDR_PRIMARY: u16 = 0x0A;
 //const I2C_ADDR_ALTERNATIVE: u16 = 0x0B;
@@ -51,11 +51,18 @@ pub struct Input {
     pub state_update: bool,
 }
 
+#[derive(Debug)]
 pub enum Command {
     TurnOff,
     TurnOn,
     SetColour(u8, u8, u8, u8),
     SetContrast(u8),
+}
+
+impl fmt::Display for Command {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Trackball {

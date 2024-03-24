@@ -2,21 +2,24 @@ use flume;
 use pim447_trackball::pim447::{Command, Input, Trackball};
 use simple_signal::{self, Signal};
 use std::{
-    error::Error,
-    sync::atomic::{AtomicBool, Ordering},
-    sync::Arc,
-    time::Duration,
+    env, error::Error, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration
 };
 use tokio::time::timeout;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info");
+    }
+    env_logger::init();
+
     let (red, green, blue, white) = Trackball::convert_hex_colour_to_rgbw("#FFFFFF".to_string())?;
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     simple_signal::set_handler(&[Signal::Int, Signal::Term], move |_signals| {
-        println!("Received an interrupt signal");
+        log::info!("Received an interrupt signal");
         r.store(false, Ordering::SeqCst);
     });
 
@@ -27,7 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     trackball.execute_command(Command::TurnOn)?;
     trackball.execute_command(Command::SetContrast(0xff))?;
     trackball.execute_command(Command::SetColour(red, green, blue, white))?;
-    println!("On");
+    log::info!("On");
 
     let task_read_inputs = tokio::spawn(async move {
         match read_inputs(trackball, tx_from_pim447, rx_to_pim447).await {
@@ -41,7 +44,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         get_inputs(running, tx_to_pim447.clone(), rx_from_pim447),
     )
     .await;
-    println!("Sending stop");
+    log::info!("Sending stop");
     tx_to_pim447.send(Command::TurnOff)?;
     task_read_inputs.await?;
 
@@ -59,19 +62,19 @@ pub async fn get_inputs(
         let result = timeout(Duration::from_secs(1), rx.recv_async()).await;
         match result {
             Ok(Ok(input)) => {
-                println!("Input {:?}", input);
+                log::info!("Input {:?}", input);
                 i = i + 1;
             }
-            Ok(Err(e)) => println!("get_inputs Error {}", e),
+            Ok(Err(e)) => log::info!("get_inputs Error {}", e),
             Err(_e) => (),
         }
 
         if i == 5 {
-            println!("Change colour to red");
+            log::info!("Change colour to red");
             tx.send(Command::SetColour(0xff, 0, 0, 0))?;
         }
     }
-    println!("Command 'TurnOff' sent");
+    log::info!("Command 'TurnOff' sent");
     tx.send(Command::TurnOff)?;
     Ok(())
 }
@@ -96,11 +99,11 @@ pub async fn read_inputs(
             Ok(Ok(command)) => {
                 trackball.execute_command(command)?;
             }
-            Ok(Err(e)) => println!("read_inputs Error {}", e),
+            Ok(Err(e)) => log::info!("read_inputs Error {}", e),
             Err(_e) => (),
         }
     }
     trackball.execute_command(Command::TurnOff)?;
-    println!("Off");
+    log::info!("Off");
     Ok(trackball)
 }
